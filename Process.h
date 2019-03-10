@@ -29,7 +29,8 @@ public:
    * @param memory MMU class object to use for memory
    * @param ptm page table manager
    */
-  Process(const std::string &file_name_, mem::MMU &memory_, PageTableManager &ptm_);
+  Process(const int time_slice, const std::string &file_name_, 
+          mem::MMU &memory_, PageTableManager &ptm_);
   
   /**
    * Destructor - close trace file, clean up processing
@@ -53,7 +54,11 @@ private:
   std::string file_name;
   std::fstream trace;
   long line_number;
+  
+  // Multiprocess variable
   int quota;
+  int num_cmd;
+  const int ts;
 
   // Memory contents
   mem::MMU &memory;
