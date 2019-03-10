@@ -35,6 +35,7 @@ namespace {
  */
 class PageFaultHandler : public mem::MMU::FaultHandler {
 public:
+  PageFaultHandler(Process &proc_):proc(proc_){}
   /**
    * Run - handle fault
    * 
@@ -44,11 +45,13 @@ public:
    * @return false
    */
   virtual bool Run(const mem::PMCB &pmcb) {
-    cout << ((pmcb.operation_state == mem::PMCB::WRITE_OP) ? "Write " : "Read ")
-           << "Page Fault at address " << std::setw(7) << std:: setfill('0') 
-           << std::hex << pmcb.next_vaddress << "\n";
+    (proc.debug? proc.outStream: cout) << ((pmcb.operation_state == mem::PMCB::WRITE_OP) ? "Write " : "Read ")
+                                       << "Page Fault at address " << std::setw(7) << std:: setfill('0')
+                                       << std::hex << pmcb.next_vaddress << "\n";
     return false;
   }
+private:
+  Process &proc;
 };
 
 /**
@@ -56,6 +59,8 @@ public:
  */
 class WritePermissionFaultHandler : public mem::MMU::FaultHandler {
 public:
+
+  WritePermissionFaultHandler(Process &proc_):proc(proc_){}
   /**
    * Run - handle fault
    * 
@@ -65,10 +70,23 @@ public:
    * @return false
    */
   virtual bool Run(const mem::PMCB &pmcb) {
-    cout << "Write Permission Fault at address " << std::setw(7) << std:: setfill('0') 
-            << std::hex << pmcb.next_vaddress << "\n";
+    // need to allocate pages on write fault
+
+    // process.memory.set_kernel_PMCB();
+    // process.ptm.MapProcessPages(pmcb, cmdArgs.at(0), cmdArgs.at(1));
+    // process.memory.set_user_PMCB(pmcb);
+
+    // return true;
+
+    (proc.debug? proc.outStream: cout) << "Write Permission Fault at address "
+                                       << std::setw(7) << std:: setfill('0')
+                                       << std::hex << pmcb.next_vaddress << "\n";
     return false;
   }
+
+
+private:
+  Process &proc;
 };
 
 
@@ -76,7 +94,7 @@ public:
 }
 
 Process::Process(const string &file_name_, mem::MMU &memory_, PageTableManager &ptm_) 
-: file_name(file_name_), line_number(0), memory(memory_), ptm(ptm_) {
+  : file_name(file_name_), line_number(0), memory(memory_), ptm(ptm_) {
   // Open the trace file.  Abort program if can't open.
   trace.open(file_name, std::ios_base::in);
   if (!trace.is_open()) {
@@ -97,9 +115,10 @@ void Process::Exec(void) {
   memory.set_user_PMCB(proc_pmcb);
   
   // Set up fault handlers
-  memory.SetPageFaultHandler(std::make_shared<PageFaultHandler>());
+  memory.SetPageFaultHandler(std::make_shared<PageFaultHandler>(*this));
+
   memory.SetWritePermissionFaultHandler(
-    std::make_shared<WritePermissionFaultHandler>());
+    std::make_shared<WritePermissionFaultHandler>(*this));
   
   // Read and process commands
   string line;                // text line read
@@ -124,7 +143,7 @@ void Process::Exec(void) {
       CmdPerm(line, cmd, cmdArgs);       // change pages' writable bits
     } else if (cmd != "*") {
       cerr << "ERROR: invalid command\n";
-      exit(2);
+      // exit(2);
     }
   }
 }
@@ -137,7 +156,7 @@ bool Process::ParseCommand(
   // Read next line
   if (std::getline(trace, line)) {
     ++line_number;
-    cout << std::dec << line_number << ":" << line << "\n";
+    (debug? outStream: cout) << std::dec << line_number << ":" << line << "\n";
     
     // No further processing if comment or empty line
     if (line.size() == 0 || line[0] == '*') {
@@ -214,7 +233,7 @@ void Process::CmdCmp(const string &line,
     uint8_t v2 = 0;
     if (!memory.movb(&v2, a2)) return;
     if(v1 != v2) {
-      cout << std::setfill('0') << std::hex
+      (debug? outStream: cout) << std::setfill('0') << std::hex
               << "cmp error"
               << ", addr1 = "  << std::setw(7) << a1
               << ", value = " << std::setw(2) << static_cast<uint32_t>(v1)
@@ -267,11 +286,11 @@ void Process::CmdFill(const string &line,
   
   // Use buffer for efficiency
   uint8_t buffer[1024];
-  memset(buffer, value, std::min(count, sizeof(buffer)));
+  memset(buffer, value, std::min((unsigned long) count, sizeof(buffer)));
   
   // Write data to memory
   while (count > 0) {
-    uint32_t block_size = std::min(count, sizeof(buffer));
+    uint32_t block_size = std::min((unsigned long) count, sizeof(buffer));
     if (!memory.movb(addr, buffer, block_size)) return;
     addr += block_size;
     count -= block_size;
@@ -287,14 +306,14 @@ void Process::CmdPrint(const string &line,
   // Output the specified number of bytes starting at the address
   for (int i = 0; i < count; ++i) {
     if ((i % 16) == 0) { // Write new line with address every 16 bytes
-      if (i > 0) cout << "\n";  // not before first line
-      cout << std::hex << std::setw(7) << std::setfill('0') << addr << ":";
+      if (i > 0) (debug? outStream: cout) << "\n";  // not before first line
+      (debug? outStream: cout) << std::hex << std::setw(7) << std::setfill('0') << addr << ":";
     }
     uint8_t b;
     if (!memory.movb(&b, addr++)) return;
-    cout << " " << std::setfill('0') << std::setw(2) << static_cast<uint32_t> (b);
+    (debug? outStream: cout) << " " << std::setfill('0') << std::setw(2) << static_cast<uint32_t> (b);
   }
-  cout << "\n";
+  (debug? outStream: cout) << "\n";
 }
 
 void Process::CmdPerm(const string &line, 

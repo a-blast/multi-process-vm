@@ -18,6 +18,9 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
 
 class Process {
 public:
@@ -47,7 +50,17 @@ public:
    * 
    */
   void Exec(void);
+
+  /*
+    setDebug - divert output from cout to a buffer stream for testing validation 
+   */
+  void setDebug(void){this->debug = true;}
+  std::string getStream(void){return outStream.str();}
   
+  // for testing output
+  bool debug=false;
+  std::stringstream outStream;
+
 private:
   // Trace file
   std::string file_name;
@@ -60,7 +73,8 @@ private:
   
   // Page table access
   PageTableManager &ptm;
-  
+
+
   /**
    * ParseCommand - parse a trace file command.
    *   Aborts program if invalid trace file.
