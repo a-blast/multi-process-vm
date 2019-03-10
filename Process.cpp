@@ -10,6 +10,8 @@
 
 #include "Process.h"
 #include "PageTableManager.h"
+#include "WritePermissionFaultHandler.h"
+#include "PageFaultHandler.h"
 
 #include <algorithm>
 #include <cctype>
@@ -28,79 +30,20 @@ using std::istringstream;
 using std::string;
 using std::vector;
 
-namespace {
-
-/**
- * PageFaultHandler
- */
-class PageFaultHandler : public mem::MMU::FaultHandler {
-public:
-  PageFaultHandler(Process &proc_):proc(proc_){}
-  /**
-   * Run - handle fault
-   * 
-   * Print message and return false
-   * 
-   * @param pmcb user mode pmcb
-   * @return false
-   */
-  virtual bool Run(const mem::PMCB &pmcb) {
-    (proc.debug? proc.outStream: cout) << ((pmcb.operation_state == mem::PMCB::WRITE_OP) ? "Write " : "Read ")
-                                       << "Page Fault at address " << std::setw(7) << std:: setfill('0')
-                                       << std::hex << pmcb.next_vaddress << "\n";
-    return false;
-  }
-private:
-  Process &proc;
-};
-
-/**
- * WritePermissionFaultHandler
- */
-class WritePermissionFaultHandler : public mem::MMU::FaultHandler {
-public:
-
-  WritePermissionFaultHandler(Process &proc_):proc(proc_){}
-  /**
-   * Run - handle fault
-   * 
-   * Print message and return false
-   * 
-   * @param pmcb user mode pmcb
-   * @return false
-   */
-  virtual bool Run(const mem::PMCB &pmcb) {
-    // need to allocate pages on write fault
-
-    // process.memory.set_kernel_PMCB();
-    // process.ptm.MapProcessPages(pmcb, cmdArgs.at(0), cmdArgs.at(1));
-    // process.memory.set_user_PMCB(pmcb);
-
-    // return true;
-
-    (proc.debug? proc.outStream: cout) << "Write Permission Fault at address "
-                                       << std::setw(7) << std:: setfill('0')
-                                       << std::hex << pmcb.next_vaddress << "\n";
-    return false;
-  }
-
-
-private:
-  Process &proc;
-};
-
-
-
-}
-
 Process::Process(const string &file_name_, mem::MMU &memory_, PageTableManager &ptm_) 
-  : file_name(file_name_), line_number(0), memory(memory_), ptm(ptm_) {
-  // Open the trace file.  Abort program if can't open.
+  : file_name(file_name_), line_number(0), memory(memory_), ptm(ptm_)
+{
+  // Open the trace file.  Abort program if can't open
+
+  // TODO: assign this from where Process is initialized
+  this->pid=1;
+
   trace.open(file_name, std::ios_base::in);
   if (!trace.is_open()) {
     cerr << "ERROR: failed to open trace file: " << file_name << "\n";
     exit(2);
   }
+
   
   // Set up empty process page table and load process PMCB
   proc_pmcb.page_table_base = ptm.CreateProcessPageTable();
@@ -117,8 +60,8 @@ void Process::Exec(void) {
   // Set up fault handlers
   memory.SetPageFaultHandler(std::make_shared<PageFaultHandler>(*this));
 
-  memory.SetWritePermissionFaultHandler(
-    std::make_shared<WritePermissionFaultHandler>(*this));
+  memory.SetWritePermissionFaultHandler(std::make_shared
+                                        <WritePermissionFaultHandler>(*this));
   
   // Read and process commands
   string line;                // text line read
@@ -156,7 +99,7 @@ bool Process::ParseCommand(
   // Read next line
   if (std::getline(trace, line)) {
     ++line_number;
-    (debug? outStream: cout) << std::dec << line_number << ":" << line << "\n";
+    (debug? outStream: cout) << std::dec << line_number << ":" << this->pid << ":" << line << "\n";
     
     // No further processing if comment or empty line
     if (line.size() == 0 || line[0] == '*') {

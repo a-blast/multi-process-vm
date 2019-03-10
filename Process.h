@@ -62,6 +62,10 @@ public:
   std::stringstream outStream;
 
 private:
+
+  friend class WritePermissionFaultHandler;
+  friend class PageFaultHandler;
+
   // Trace file
   std::string file_name;
   std::fstream trace;
@@ -70,7 +74,10 @@ private:
   // Memory contents
   mem::MMU &memory;
   mem::PMCB proc_pmcb;  // PMCB for this process
-  
+
+  // PID
+  int pid;
+
   // Page table access
   PageTableManager &ptm;
 
