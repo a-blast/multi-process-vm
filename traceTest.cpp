@@ -17,7 +17,7 @@
 
 auto processOutputGetter =
   [](std::string filePath, mem::MMU &memory, PageTableManager &ptm){
-    Process proc(filePath, memory, ptm);
+    Process proc(5, filePath, memory, ptm);
     proc.setDebug();
     proc.Exec();
     std::istringstream outStream(proc.getStream());
@@ -40,8 +40,8 @@ auto validateOutput =
     std::istringstream outputStream(output);
     bool linesAreEqual;
     int failureCounter = 0;
-    while(getline(outputStream, outputLine)){
-      getline(validationStream, validationLine);
+    while(getline(validationStream, validationLine)){
+      getline(outputStream, outputLine);
       linesAreEqual = (validationLine == outputLine);
       if(debug){std::cout << (linesAreEqual?"\n~~~\n":"")
                           << "O: " << outputLine << "\n"

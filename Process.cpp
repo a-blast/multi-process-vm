@@ -85,9 +85,7 @@ void Process::Exec(void) {
       cerr << "ERROR: invalid command\n";
       exit(2);
     }
-    cout << "ts " << ts << ", num_cmd " << num_cmd << "\n";
   }
-  cout << "Got out of the loop\n";
   num_cmd = 0;
 }
 
