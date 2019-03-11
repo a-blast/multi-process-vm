@@ -30,21 +30,19 @@ using std::istringstream;
 using std::string;
 using std::vector;
 
-Process::Process(const string &file_name_, mem::MMU &memory_, PageTableManager &ptm_) 
-  : file_name(file_name_), line_number(0), memory(memory_), ptm(ptm_)
-{
-  // Open the trace file.  Abort program if can't open
 
-  // TODO: assign this from where Process is initialized
-  this->pid=1;
-
+Process::Process(const int time_slice, const string &file_name_, 
+        mem::MMU &memory_, PageTableManager &ptm_) 
+: file_name(file_name_), line_number(0), memory(memory_), ptm(ptm_), 
+        ts(time_slice), num_cmd(0) {
+  
+                                    this->pid=1;
+    // Open the trace file.  Abort program if can't open.
   trace.open(file_name, std::ios_base::in);
   if (!trace.is_open()) {
     cerr << "ERROR: failed to open trace file: " << file_name << "\n";
     exit(2);
   }
-
-  
   // Set up empty process page table and load process PMCB
   proc_pmcb.page_table_base = ptm.CreateProcessPageTable();
 }
@@ -62,17 +60,14 @@ void Process::Exec(void) {
 
   memory.SetWritePermissionFaultHandler(std::make_shared
                                         <WritePermissionFaultHandler>(*this));
-  
   // Read and process commands
   string line;                // text line read
   string cmd;                 // command from line
   vector<uint32_t> cmdArgs;   // arguments from line
   
   // Select the command to execute
-  while (ParseCommand(line, cmd, cmdArgs)) {
-    if (cmd == "alloc" ) {
-      CmdAlloc(line, cmd, cmdArgs);      // allocate and map pages
-    } else if (cmd == "cmp") {
+  while (num_cmd < ts && ParseCommand(line, cmd, cmdArgs)) {
+    if (cmd == "cmp") {
       CmdCmp(line, cmd, cmdArgs);        // get and compare multiple bytes
     } else if (cmd == "set") {
       CmdSet(line, cmd, cmdArgs);        // put bytes
@@ -84,11 +79,16 @@ void Process::Exec(void) {
       CmdPrint(line, cmd, cmdArgs);      // dump byte values to output
     } else if (cmd == "perm") {
       CmdPerm(line, cmd, cmdArgs);       // change pages' writable bits
+    } else if (cmd == "quota"){
+      CmdQuota(line, cmd, cmdArgs);      // set max number of page frames
     } else if (cmd != "*") {
       cerr << "ERROR: invalid command\n";
-      // exit(2);
+      exit(2);
     }
+    cout << "ts " << ts << ", num_cmd " << num_cmd << "\n";
   }
+  cout << "Got out of the loop\n";
+  num_cmd = 0;
 }
 
 bool Process::ParseCommand(
@@ -100,7 +100,6 @@ bool Process::ParseCommand(
   if (std::getline(trace, line)) {
     ++line_number;
     (debug? outStream: cout) << std::dec << line_number << ":" << this->pid << ":" << line << "\n";
-    
     // No further processing if comment or empty line
     if (line.size() == 0 || line[0] == '*') {
       cmd = "*";
@@ -139,6 +138,7 @@ bool Process::ParseCommand(
     }
     return true;
   } else if (trace.eof()) {
+      done = true;
       return false;
   } else {
     cerr << "ERROR: getline failed on trace file: " << file_name 
@@ -151,6 +151,7 @@ void Process::CmdAlloc(const string &line,
                        const string &cmd, 
                        const vector<uint32_t> &cmdArgs) {
   // Allocate the specified memory pages
+  num_cmd += 1;
   memory.set_kernel_PMCB();
   ptm.MapProcessPages(proc_pmcb, cmdArgs.at(0), cmdArgs.at(1));
   memory.set_user_PMCB(proc_pmcb);
@@ -163,6 +164,7 @@ void Process::CmdCmp(const string &line,
     cerr << "ERROR: badly formatted cmp command\n";
     exit(2);
   }
+  num_cmd += 1;
   Addr addr1 = cmdArgs.at(0);
   Addr addr2 = cmdArgs.at(1);
   uint32_t count = cmdArgs.at(2);
@@ -191,6 +193,7 @@ void Process::CmdSet(const string &line,
                      const vector<uint32_t> &cmdArgs) {
   // Store multiple bytes starting at specified address
   Addr addr = cmdArgs.at(0);
+  num_cmd += 1;
   for (int i = 1; i < cmdArgs.size(); ++i) {
     uint8_t b = cmdArgs.at(i);
     if (!memory.movb(addr++, &b)) return;
@@ -204,6 +207,7 @@ void Process::CmdDup(const string &line,
     cerr << "ERROR: badly formatted dup command\n";
     exit(2);
   }
+  num_cmd += 1;
   
   // Copy specified number of bytes to destination from source
   Addr dst = cmdArgs.at(1);
@@ -227,6 +231,7 @@ void Process::CmdFill(const string &line,
   uint32_t count = cmdArgs.at(2);
   Addr addr = cmdArgs.at(0);
   
+  num_cmd += 1;
   // Use buffer for efficiency
   uint8_t buffer[1024];
   memset(buffer, value, std::min((unsigned long) count, sizeof(buffer)));
@@ -234,6 +239,7 @@ void Process::CmdFill(const string &line,
   // Write data to memory
   while (count > 0) {
     uint32_t block_size = std::min((unsigned long) count, sizeof(buffer));
+  
     if (!memory.movb(addr, buffer, block_size)) return;
     addr += block_size;
     count -= block_size;
@@ -245,6 +251,7 @@ void Process::CmdPrint(const string &line,
                      const vector<uint32_t> &cmdArgs) {
   Addr addr = cmdArgs.at(0);
   uint32_t count = cmdArgs.at(1);
+  num_cmd += 1;
 
   // Output the specified number of bytes starting at the address
   for (int i = 0; i < count; ++i) {
@@ -263,7 +270,17 @@ void Process::CmdPerm(const string &line,
                       const string &cmd, 
                       const vector<uint32_t> &cmdArgs) {
   // Change the permissions of the specified pages
+  num_cmd += 1;
   memory.set_kernel_PMCB();
   ptm.SetPageWritePermission(proc_pmcb, cmdArgs.at(0), cmdArgs.at(1), cmdArgs.at(2));
   memory.set_user_PMCB(proc_pmcb);
+}
+
+void Process::CmdQuota(const string &line, 
+                       const string &cmd, 
+                       const vector<uint32_t> &cmdArgs){
+  
+    // Set the quota, i.e. max number of page frames for the process
+    quota = cmdArgs[0];
+    num_cmd += 1;
 }

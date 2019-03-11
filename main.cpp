@@ -15,6 +15,9 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
+#include <stdlib.h>
+#include <unistd.h>
 
 using mem::MMU;
 
@@ -23,10 +26,12 @@ using std::cout;
 using std::string;
 using std::vector;
 
+using namespace std;
+
 int main(int argc, char* argv[]) {
   // Use command line argument as file name
-  if (argc != 2) {
-    std::cerr << "usage: program2 input_file\n";
+  if (argc != 4) {
+    std::cerr << "usage: program3 input_file\n";
     exit(1);
   }
   
@@ -36,10 +41,45 @@ int main(int argc, char* argv[]) {
   FrameAllocator allocator(memory);
   PageTableManager ptm(memory, allocator);
   
-  // Create the process
-  Process process(argv[1], memory, ptm);
+  // Variables to create processes
+  int i = 2;
+  int j = 0;
+  vector<Process*> p;
+  Process *Ppoint; 
+  vector<int> procs;
   
-  // Run the commands
-  process.Exec();
+  // Create the processes
+  while (i < argc){
+      Ppoint = new Process(stoi(argv[1]), argv[i], memory, ptm);
+      p.push_back(Ppoint);
+//      procs.push_back(i-1);
+      i++;
+  }
+  Ppoint = nullptr;
+  
+//  Process process(stoi(argv[1]), argv[2], memory, ptm);
+  int k = 0;
+  int l = 0;
+  while (p.size() > 0){
+      p[k]->Exec();
+      // delete out of the vector
+      // delete off of heap
+      if (p[k]->getDone()){
+          cout << "Process " << k << " is done!\n";
+          Ppoint = p[k];
+          p.erase(p.begin() + k);
+          delete Ppoint;
+          Ppoint = nullptr;
+          cout << "p.size() = " << p.size() << "\n";
+          if (p.size() > 0){
+            k = k%p.size();
+          }
+      }
+      else{
+        cout << k << "\n";
+        k = (k+1)%p.size();
+      }
+      cout << std::dec << l << " this is l\n";
+      l++;
+  }
 }
-
