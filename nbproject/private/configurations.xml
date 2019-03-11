@@ -30,8 +30,11 @@
           <runcommandpicklistitem>"${OUTPUT_PATH}" trace2v_multi-page.txt</runcommandpicklistitem>
           <runcommandpicklistitem>"${OUTPUT_PATH}" trace1-3.txt</runcommandpicklistitem>
           <runcommandpicklistitem>"${OUTPUT_PATH}" 2 trace1-3.txt</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" 4 trace1-3.txt trace1-3.txt</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" 4 trace1-3.txt trace2-3.txt</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" 4 trace1-3.txt trace2-3_multi-page.txt</runcommandpicklistitem>
         </runcommandpicklist>
-        <runcommand>"${OUTPUT_PATH}" 2 trace1-3.txt</runcommand>
+        <runcommand>"${OUTPUT_PATH}" 4 trace1-3.txt trace2-3_multi-page.txt</runcommand>
         <rundir></rundir>
         <buildfirst>true</buildfirst>
         <terminal-type>0</terminal-type>

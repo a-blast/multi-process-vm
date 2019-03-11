@@ -49,6 +49,10 @@ public:
    */
   void Exec(void);
   
+  bool getDone(){
+      return done;
+  }
+  
 private:
   // Trace file
   std::string file_name;
@@ -59,6 +63,7 @@ private:
   int quota;
   int num_cmd;
   const int ts;
+  bool done = false;
 
   // Memory contents
   mem::MMU &memory;

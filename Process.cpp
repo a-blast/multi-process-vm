@@ -110,7 +110,7 @@ void Process::Exec(void) {
   vector<uint32_t> cmdArgs;   // arguments from line
   
   // Select the command to execute
-  while (ParseCommand(line, cmd, cmdArgs) & num_cmd < ts) {
+  while (num_cmd < ts && ParseCommand(line, cmd, cmdArgs)) {
     if (cmd == "cmp") {
       CmdCmp(line, cmd, cmdArgs);        // get and compare multiple bytes
     } else if (cmd == "set") {
@@ -124,12 +124,14 @@ void Process::Exec(void) {
     } else if (cmd == "perm") {
       CmdPerm(line, cmd, cmdArgs);       // change pages' writable bits
     } else if (cmd == "quota"){
-        CmdQuota(line, cmd, cmdArgs);    // set max number of page frames
+      CmdQuota(line, cmd, cmdArgs);      // set max number of page frames
     } else if (cmd != "*") {
       cerr << "ERROR: invalid command\n";
       exit(2);
     }
+    cout << "ts " << ts << ", num_cmd " << num_cmd << "\n";
   }
+  cout << "Got out of the loop\n";
   num_cmd = 0;
 }
 
@@ -181,6 +183,7 @@ bool Process::ParseCommand(
     }
     return true;
   } else if (trace.eof()) {
+      done = true;
       return false;
   } else {
     cerr << "ERROR: getline failed on trace file: " << file_name 
@@ -193,10 +196,10 @@ void Process::CmdAlloc(const string &line,
                        const string &cmd, 
                        const vector<uint32_t> &cmdArgs) {
   // Allocate the specified memory pages
+  num_cmd += 1;
   memory.set_kernel_PMCB();
   ptm.MapProcessPages(proc_pmcb, cmdArgs.at(0), cmdArgs.at(1));
   memory.set_user_PMCB(proc_pmcb);
-  num_cmd += 1;
 }
 
 void Process::CmdCmp(const string &line,
@@ -206,6 +209,7 @@ void Process::CmdCmp(const string &line,
     cerr << "ERROR: badly formatted cmp command\n";
     exit(2);
   }
+  num_cmd += 1;
   Addr addr1 = cmdArgs.at(0);
   Addr addr2 = cmdArgs.at(1);
   uint32_t count = cmdArgs.at(2);
@@ -227,7 +231,6 @@ void Process::CmdCmp(const string &line,
               << ", value = " << std::setw(2) << static_cast<uint32_t>(v2) << "\n";
     }
   }
-  num_cmd += 1;
 }
 
 void Process::CmdSet(const string &line,
@@ -235,11 +238,11 @@ void Process::CmdSet(const string &line,
                      const vector<uint32_t> &cmdArgs) {
   // Store multiple bytes starting at specified address
   Addr addr = cmdArgs.at(0);
+  num_cmd += 1;
   for (int i = 1; i < cmdArgs.size(); ++i) {
     uint8_t b = cmdArgs.at(i);
     if (!memory.movb(addr++, &b)) return;
   }
-  num_cmd += 1;
 }
 
 void Process::CmdDup(const string &line,
@@ -249,6 +252,7 @@ void Process::CmdDup(const string &line,
     cerr << "ERROR: badly formatted dup command\n";
     exit(2);
   }
+  num_cmd += 1;
   
   // Copy specified number of bytes to destination from source
   Addr dst = cmdArgs.at(1);
@@ -262,7 +266,6 @@ void Process::CmdDup(const string &line,
     if (!memory.movb(dst++, &buffer)) return;
     --count;
   }
-  num_cmd += 1;
 }
 
 void Process::CmdFill(const string &line,
@@ -272,6 +275,7 @@ void Process::CmdFill(const string &line,
   uint8_t value = cmdArgs.at(1);
   uint32_t count = cmdArgs.at(2);
   Addr addr = cmdArgs.at(0);
+  num_cmd += 1;
   
   // Use buffer for efficiency
   uint8_t buffer[1024];
@@ -284,7 +288,6 @@ void Process::CmdFill(const string &line,
     addr += block_size;
     count -= block_size;
   }
-  num_cmd += 1;
 }
 
 void Process::CmdPrint(const string &line,
@@ -292,6 +295,7 @@ void Process::CmdPrint(const string &line,
                      const vector<uint32_t> &cmdArgs) {
   Addr addr = cmdArgs.at(0);
   uint32_t count = cmdArgs.at(1);
+  num_cmd += 1;
 
   // Output the specified number of bytes starting at the address
   for (int i = 0; i < count; ++i) {
@@ -304,17 +308,16 @@ void Process::CmdPrint(const string &line,
     cout << " " << std::setfill('0') << std::setw(2) << static_cast<uint32_t> (b);
   }
   cout << "\n";
-  num_cmd += 1;
 }
 
 void Process::CmdPerm(const string &line, 
                       const string &cmd, 
                       const vector<uint32_t> &cmdArgs) {
   // Change the permissions of the specified pages
+  num_cmd += 1;
   memory.set_kernel_PMCB();
   ptm.SetPageWritePermission(proc_pmcb, cmdArgs.at(0), cmdArgs.at(1), cmdArgs.at(2));
   memory.set_user_PMCB(proc_pmcb);
-  num_cmd += 1;
 }
 
 void Process::CmdQuota(const string &line, 
