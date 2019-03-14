@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
   
   // Create the processes
   while (i < argc){
-      Ppoint = new Process(stoi(argv[1]), argv[i], memory, ptm);
+    Ppoint = new Process(stoi(argv[1]), argv[i], memory, ptm, allocator);
       p.push_back(Ppoint);
 //      procs.push_back(i-1);
       i++;

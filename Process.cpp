@@ -10,6 +10,7 @@
 
 #include "Process.h"
 #include "PageTableManager.h"
+#include "FrameAllocator.h"
 #include "WritePermissionFaultHandler.h"
 #include "PageFaultHandler.h"
 
@@ -32,11 +33,11 @@ using std::vector;
 
 
 Process::Process(const int time_slice, const string &file_name_, 
-        mem::MMU &memory_, PageTableManager &ptm_) 
+                 mem::MMU &memory_, PageTableManager &ptm_, FrameAllocator &frame_alloc_) 
 : file_name(file_name_), line_number(0), memory(memory_), ptm(ptm_), 
-        ts(time_slice), num_cmd(0) {
+  ts(time_slice), num_cmd(0), num_pages(0), frame_alloc(frame_alloc_) {
   
-                                    this->pid=1;
+  this->pid=1;
     // Open the trace file.  Abort program if can't open.
   trace.open(file_name, std::ios_base::in);
   if (!trace.is_open()) {
@@ -45,6 +46,7 @@ Process::Process(const int time_slice, const string &file_name_,
   }
   // Set up empty process page table and load process PMCB
   proc_pmcb.page_table_base = ptm.CreateProcessPageTable();
+  this->pagesAllocatedPhysical.push_back(proc_pmcb.page_table_base);
 }
 
 Process::~Process() {
@@ -145,13 +147,26 @@ bool Process::ParseCommand(
   }
 }
 
+void Process::killSelf(){
+
+  this->memory.set_kernel_PMCB();
+
+  this->frame_alloc
+    .FreePageFrames(this->num_pages+1, this->pagesAllocatedPhysical);
+
+  (debug? outStream: cout) << "free page frames = "
+                           << std::hex
+                           << this->frame_alloc.get_page_frames_free()
+                           << "\n";
+}
+
 void Process::CmdAlloc(const string &line, 
                        const string &cmd, 
                        const vector<uint32_t> &cmdArgs) {
   // Allocate the specified memory pages
   num_cmd += 1;
   memory.set_kernel_PMCB();
-  ptm.MapProcessPages(proc_pmcb, cmdArgs.at(0), cmdArgs.at(1));
+  ptm.MapProcessPages(proc_pmcb, cmdArgs.at(0), cmdArgs.at(1), this->pagesAllocatedPhysical);
   memory.set_user_PMCB(proc_pmcb);
 }
 

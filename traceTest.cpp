@@ -16,8 +16,9 @@
 #include <sstream>
 
 auto processOutputGetter =
-  [](std::string filePath, mem::MMU &memory, PageTableManager &ptm){
-    Process proc(5, filePath, memory, ptm);
+  [](std::string filePath, mem::MMU &memory,
+     PageTableManager &ptm, FrameAllocator &alloc){
+    Process proc(5000, filePath, memory, ptm, alloc);
     proc.setDebug();
     proc.Exec();
     std::istringstream outStream(proc.getStream());
@@ -59,8 +60,8 @@ TEST(ProcessOutput, trace1){
   FrameAllocator allocator(memory);
   PageTableManager ptm(memory, allocator);
   std::istringstream ss;
-  ss = processOutputGetter("./trace1-3.txt", memory, ptm);
-  validateOutput(ss.str(), getExpectedOutput("./trace1-3.txt.out"),false);
+  ss = processOutputGetter("./trace1-3.txt", memory, ptm, allocator);
+  validateOutput(ss.str(), getExpectedOutput("./trace1-3.txt.out"),true);
 }
 
 TEST(ProcessOutput, trace2){
@@ -68,7 +69,7 @@ TEST(ProcessOutput, trace2){
   FrameAllocator allocator(memory);
   PageTableManager ptm(memory, allocator);
   std::istringstream ss;
-  ss = processOutputGetter("./trace2-3_multi-page.txt", memory, ptm);
+  ss = processOutputGetter("./trace2-3_multi-page.txt", memory, ptm, allocator);
   validateOutput(ss.str(),
                  getExpectedOutput("./trace2-3_multi-page.txt.out"),false);
 }
@@ -78,7 +79,7 @@ TEST(ProcessOutput, trace3){
   FrameAllocator allocator(memory);
   PageTableManager ptm(memory, allocator);
   std::istringstream ss;
-  ss = processOutputGetter("./trace3-3_edge-addr.txt", memory, ptm);
+  ss = processOutputGetter("./trace3-3_edge-addr.txt", memory, ptm, allocator);
   validateOutput(ss.str(),
                  getExpectedOutput("./trace3-3_edge-addr.txt.out"),false);
 }
@@ -88,7 +89,7 @@ TEST(ProcessOutput, trace4){
   FrameAllocator allocator(memory);
   PageTableManager ptm(memory, allocator);
   std::istringstream ss;
-  ss = processOutputGetter("./trace4-3_wprotect.txt", memory, ptm);
+  ss = processOutputGetter("./trace4-3_wprotect.txt", memory, ptm, allocator);
   validateOutput(ss.str(),
                  getExpectedOutput("./trace4-3_wprotect.txt.out"),false);
 }
@@ -98,7 +99,7 @@ TEST(ProcessOutput, trace5){
   FrameAllocator allocator(memory);
   PageTableManager ptm(memory, allocator);
   std::istringstream ss;
-  ss = processOutputGetter("./trace5-3_pagefaults.txt", memory, ptm);
+  ss = processOutputGetter("./trace5-3_pagefaults.txt", memory, ptm, allocator);
   validateOutput(ss.str(),
                  getExpectedOutput("./trace5-3_pagefaults.txt.out"),true);
 }

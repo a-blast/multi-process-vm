@@ -33,7 +33,7 @@ public:
    * @param ptm page table manager
    */
   Process(const int time_slice, const std::string &file_name_, 
-          mem::MMU &memory_, PageTableManager &ptm_);
+          mem::MMU &memory_, PageTableManager &ptm_, FrameAllocator &frame_alloc_);
   
   /**
    * Destructor - close trace file, clean up processing
@@ -66,18 +66,24 @@ public:
     return done;
   }
 
+  /*
+    killSelf - delete all pages (table & allocated pages) associated w/ the process
+    exits with memory in KERNEL mode.
+   */
+  void killSelf(void);
+
 private:
 
   friend class WritePermissionFaultHandler;
   friend class PageFaultHandler;
 
-private:
   // Trace file
   std::string file_name;
   std::fstream trace;
   long line_number;
   
   // Multiprocess variable
+  int num_pages;
   int quota;
   int num_cmd;
   const int ts;
@@ -86,6 +92,8 @@ private:
   // Memory contents
   mem::MMU &memory;
   mem::PMCB proc_pmcb;  // PMCB for this process
+  std::vector<mem::Addr> pagesAllocatedPhysical;
+  FrameAllocator &frame_alloc;
 
   // PID
   int pid;

@@ -42,9 +42,18 @@ class PageFaultHandler : public mem::MMU::FaultHandler {
 
 
     if(pmcb.operation_state == mem::PMCB::WRITE_OP){
+      if(proc.num_pages >= proc.quota){
+        (proc.debug? proc.outStream: cout) << "Quota exceeded, process terminated, ";
+        proc.killSelf();
+        return false;
+      }
+      
       proc.memory.set_kernel_PMCB();
-      proc.ptm.MapProcessPages(pmcb, (pmcb.next_vaddress >> 14) << 14, 1);
+      mem::Addr basePageVirtAddr = (pmcb.next_vaddress >> 14) << 14;
+      proc.ptm.MapProcessPages(pmcb, basePageVirtAddr ,
+                               1, proc.pagesAllocatedPhysical);
       proc.memory.set_user_PMCB(pmcb);
+      proc.num_pages ++;
       return true;
     }else{
       (proc.debug? proc.outStream: cout)
