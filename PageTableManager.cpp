@@ -55,8 +55,8 @@ Addr PageTableManager::CreateProcessPageTable(void) {
   return allocated[0];
 }
 
-void PageTableManager::MapProcessPages(
-    const mem::PMCB &user_pmcb, Addr vaddr, size_t count) {
+void PageTableManager::MapProcessPages(const mem::PMCB &user_pmcb, Addr vaddr,
+                                       size_t count, vector<Addr> &physicalPages) {
   // Check for valid virtual address
   if ((vaddr & mem::kPageOffsetMask) != 0) {
     throw std::runtime_error("vaddr not a multiple of page size");
@@ -87,6 +87,7 @@ void PageTableManager::MapProcessPages(
     if ((pt_entry & mem::kPTE_PresentMask) == 0) {
       pt_entry = 
               allocated.back() | mem::kPTE_PresentMask | mem::kPTE_WritableMask;
+      physicalPages.push_back(allocated.back());
       allocated.pop_back();
       memory.movb(pte_addr, &pt_entry, sizeof(PageTableEntry));
     } else {

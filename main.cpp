@@ -6,6 +6,7 @@
  */
 
 #include "FrameAllocator.h"
+#include "RR_scheduler.h"
 #include "PageTableManager.h"
 #include "Process.h"
 
@@ -50,37 +51,13 @@ int main(int argc, char* argv[]) {
   
   // Create the processes
   while (i < argc){
-      Ppoint = new Process(stoi(argv[1]), argv[i], memory, ptm);
+    Ppoint = new Process(stoi(argv[1]), argv[i], memory, ptm, allocator, i-1);
       p.push_back(Ppoint);
-//      procs.push_back(i-1);
+      procs.push_back(i-1);
       i++;
   }
   Ppoint = nullptr;
   
-//  Process process(stoi(argv[1]), argv[2], memory, ptm);
-  int k = 0;
-  int l = 0;
-  while (p.size() > 0){
-      p[k]->Exec();
-      // delete out of the vector
-      // delete off of heap
-      if (p[k]->getDone()){
-          cout << "Process " << k << " is done!\n";
-          Ppoint = p[k];
-          p.erase(p.begin() + k);
-          delete Ppoint;
-          Ppoint = nullptr;
-          cout << "p.size() = " << p.size() << "\n";
-          if (p.size() > 0){
-            k = k%p.size();
-          }
-      }
-      else{
-        cout << k << "\n";
-        k = (k+1)%p.size();
-      }
-      cout << std::dec << l << " this is l\n";
-      l++;
-  }
-  usleep(2000);
+  RR_scheduler(p, procs);
+  
 }

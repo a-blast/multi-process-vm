@@ -38,6 +38,7 @@ OBJECTFILES= \
 	${OBJECTDIR}/FrameAllocator.o \
 	${OBJECTDIR}/PageTableManager.o \
 	${OBJECTDIR}/Process.o \
+	${OBJECTDIR}/RR_scheduler.o \
 	${OBJECTDIR}/main.o
 
 
@@ -81,6 +82,11 @@ ${OBJECTDIR}/Process.o: Process.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -I../memorysubsystemw2019 -std=c++14 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Process.o Process.cpp
+
+${OBJECTDIR}/RR_scheduler.o: RR_scheduler.cpp
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -I../memorysubsystemw2019 -std=c++14 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/RR_scheduler.o RR_scheduler.cpp
 
 ${OBJECTDIR}/main.o: main.cpp
 	${MKDIR} -p ${OBJECTDIR}

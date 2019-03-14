@@ -10,6 +10,9 @@
 
 #include "Process.h"
 #include "PageTableManager.h"
+#include "FrameAllocator.h"
+#include "WritePermissionFaultHandler.h"
+#include "PageFaultHandler.h"
 
 #include <algorithm>
 #include <cctype>
@@ -28,57 +31,12 @@ using std::istringstream;
 using std::string;
 using std::vector;
 
-namespace {
-
-/**
- * PageFaultHandler
- */
-class PageFaultHandler : public mem::MMU::FaultHandler {
-public:
-  /**
-   * Run - handle fault
-   * 
-   * Print message and return false
-   * 
-   * @param pmcb user mode pmcb
-   * @return false
-   */
-  virtual bool Run(const mem::PMCB &pmcb) {
-    cout << ((pmcb.operation_state == mem::PMCB::WRITE_OP) ? "Write " : "Read ")
-           << "Page Fault at address " << std::setw(7) << std:: setfill('0') 
-           << std::hex << pmcb.next_vaddress << "\n";
-    return false;
-  }
-};
-
-/**
- * WritePermissionFaultHandler
- */
-class WritePermissionFaultHandler : public mem::MMU::FaultHandler {
-public:
-  /**
-   * Run - handle fault
-   * 
-   * Print message and return false
-   * 
-   * @param pmcb user mode pmcb
-   * @return false
-   */
-  virtual bool Run(const mem::PMCB &pmcb) {
-    cout << "Write Permission Fault at address " << std::setw(7) << std:: setfill('0') 
-            << std::hex << pmcb.next_vaddress << "\n";
-    return false;
-  }
-};
-
-
-
-}
 
 Process::Process(const int time_slice, const string &file_name_, 
-        mem::MMU &memory_, PageTableManager &ptm_) 
+                 mem::MMU &memory_, PageTableManager &ptm_, FrameAllocator &frame_alloc_,
+                 int pid) 
 : file_name(file_name_), line_number(0), memory(memory_), ptm(ptm_), 
-        ts(time_slice), num_cmd(0) {
+  ts(time_slice), num_cmd(0), num_pages(0), frame_alloc(frame_alloc_), pid(pid) {
   
     // Open the trace file.  Abort program if can't open.
   trace.open(file_name, std::ios_base::in);
@@ -86,9 +44,9 @@ Process::Process(const int time_slice, const string &file_name_,
     cerr << "ERROR: failed to open trace file: " << file_name << "\n";
     exit(2);
   }
-  
   // Set up empty process page table and load process PMCB
   proc_pmcb.page_table_base = ptm.CreateProcessPageTable();
+  this->pagesAllocatedPhysical.push_back(proc_pmcb.page_table_base);
 }
 
 Process::~Process() {
@@ -100,10 +58,10 @@ void Process::Exec(void) {
   memory.set_user_PMCB(proc_pmcb);
   
   // Set up fault handlers
-  memory.SetPageFaultHandler(std::make_shared<PageFaultHandler>());
-  memory.SetWritePermissionFaultHandler(
-    std::make_shared<WritePermissionFaultHandler>());
-  
+  memory.SetPageFaultHandler(std::make_shared<PageFaultHandler>(*this));
+
+  memory.SetWritePermissionFaultHandler(std::make_shared
+                                        <WritePermissionFaultHandler>(*this));
   // Read and process commands
   string line;                // text line read
   string cmd;                 // command from line
@@ -129,9 +87,7 @@ void Process::Exec(void) {
       cerr << "ERROR: invalid command\n";
       exit(2);
     }
-    cout << "ts " << ts << ", num_cmd " << num_cmd << "\n";
   }
-  cout << "Got out of the loop\n";
   num_cmd = 0;
 }
 
@@ -143,8 +99,7 @@ bool Process::ParseCommand(
   // Read next line
   if (std::getline(trace, line)) {
     ++line_number;
-    cout << std::dec << line_number << ":" << line << "\n";
-    
+    (debug? outStream: cout) << std::dec << line_number << ":" << this->pid << ":" << line << "\n";
     // No further processing if comment or empty line
     if (line.size() == 0 || line[0] == '*') {
       cmd = "*";
@@ -183,6 +138,8 @@ bool Process::ParseCommand(
     }
     return true;
   } else if (trace.eof()) {
+      (debug? outStream: cout) << "TERMINATED,";
+      this->killSelf();
       done = true;
       return false;
   } else {
@@ -192,13 +149,26 @@ bool Process::ParseCommand(
   }
 }
 
+void Process::killSelf(){
+
+  this->memory.set_kernel_PMCB();
+
+  this->frame_alloc
+    .FreePageFrames(this->num_pages+1, this->pagesAllocatedPhysical);
+
+  (debug? outStream: cout) << "free page frames = "
+                           << std::hex
+                           << this->frame_alloc.get_page_frames_free()
+                           << "\n";
+}
+
 void Process::CmdAlloc(const string &line, 
                        const string &cmd, 
                        const vector<uint32_t> &cmdArgs) {
   // Allocate the specified memory pages
   num_cmd += 1;
   memory.set_kernel_PMCB();
-  ptm.MapProcessPages(proc_pmcb, cmdArgs.at(0), cmdArgs.at(1));
+  ptm.MapProcessPages(proc_pmcb, cmdArgs.at(0), cmdArgs.at(1), this->pagesAllocatedPhysical);
   memory.set_user_PMCB(proc_pmcb);
 }
 
@@ -223,7 +193,7 @@ void Process::CmdCmp(const string &line,
     uint8_t v2 = 0;
     if (!memory.movb(&v2, a2)) return;
     if(v1 != v2) {
-      cout << std::setfill('0') << std::hex
+      (debug? outStream: cout) << std::setfill('0') << std::hex
               << "cmp error"
               << ", addr1 = "  << std::setw(7) << a1
               << ", value = " << std::setw(2) << static_cast<uint32_t>(v1)
@@ -275,15 +245,16 @@ void Process::CmdFill(const string &line,
   uint8_t value = cmdArgs.at(1);
   uint32_t count = cmdArgs.at(2);
   Addr addr = cmdArgs.at(0);
-  num_cmd += 1;
   
+  num_cmd += 1;
   // Use buffer for efficiency
   uint8_t buffer[1024];
-  memset(buffer, value, std::min(count, sizeof(buffer)));
+  memset(buffer, value, std::min((unsigned long) count,(unsigned long) sizeof(buffer)));
   
   // Write data to memory
   while (count > 0) {
-    uint32_t block_size = std::min(count, sizeof(buffer));
+    uint32_t block_size = std::min((unsigned long) count,(unsigned long) sizeof(buffer));
+  
     if (!memory.movb(addr, buffer, block_size)) return;
     addr += block_size;
     count -= block_size;
@@ -300,14 +271,14 @@ void Process::CmdPrint(const string &line,
   // Output the specified number of bytes starting at the address
   for (int i = 0; i < count; ++i) {
     if ((i % 16) == 0) { // Write new line with address every 16 bytes
-      if (i > 0) cout << "\n";  // not before first line
-      cout << std::hex << std::setw(7) << std::setfill('0') << addr << ":";
+      if (i > 0) (debug? outStream: cout) << "\n";  // not before first line
+      (debug? outStream: cout) << std::hex << std::setw(7) << std::setfill('0') << addr << ":";
     }
     uint8_t b;
     if (!memory.movb(&b, addr++)) return;
-    cout << " " << std::setfill('0') << std::setw(2) << static_cast<uint32_t> (b);
+    (debug? outStream: cout) << " " << std::setfill('0') << std::setw(2) << static_cast<uint32_t> (b);
   }
-  cout << "\n";
+  (debug? outStream: cout) << "\n";
 }
 
 void Process::CmdPerm(const string &line, 

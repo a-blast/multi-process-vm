@@ -9,6 +9,7 @@
 #define PAGETABLEMANAGER_H
 
 #include "FrameAllocator.h"
+#include <vector>
 
 class PageTableManager {
 public:
@@ -54,7 +55,8 @@ public:
    * @param count number of pages to map
    * @throws std::runtime_error if unable to allocate memory for pages
    */
-  void MapProcessPages(const mem::PMCB &user_pmcb, mem::Addr vaddr, size_t count);
+  void MapProcessPages(const mem::PMCB &user_pmcb, mem::Addr vaddr,
+                       size_t count, std::vector<mem::Addr> &physicalPage);
   
   /**
    * SetPageWritePermission - change writable bit for page(s)
@@ -76,4 +78,3 @@ public:
 };
 
 #endif /* PAGETABLEMANAGER_H */
-

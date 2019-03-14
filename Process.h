@@ -18,6 +18,9 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
 
 class Process {
 public:
@@ -30,7 +33,8 @@ public:
    * @param ptm page table manager
    */
   Process(const int time_slice, const std::string &file_name_, 
-          mem::MMU &memory_, PageTableManager &ptm_);
+          mem::MMU &memory_, PageTableManager &ptm_, FrameAllocator &frame_alloc_,
+          int pid);
   
   /**
    * Destructor - close trace file, clean up processing
@@ -48,18 +52,39 @@ public:
    * 
    */
   void Exec(void);
+
+  /*
+    setDebug - divert output from cout to a buffer stream for testing validation 
+   */
+  void setDebug(void){this->debug = true;}
+  std::string getStream(void){return outStream.str();}
   
+  // for testing output
+  bool debug=false;
+  std::stringstream outStream;
+
   bool getDone(){
-      return done;
+    return done;
   }
-  
+
+  /*
+    killSelf - delete all pages (table & allocated pages) associated w/ the process
+    exits with memory in KERNEL mode.
+   */
+  void killSelf(void);
+
 private:
+
+  friend class WritePermissionFaultHandler;
+  friend class PageFaultHandler;
+
   // Trace file
   std::string file_name;
   std::fstream trace;
   long line_number;
   
   // Multiprocess variable
+  int num_pages;
   int quota;
   int num_cmd;
   const int ts;
@@ -68,10 +93,14 @@ private:
   // Memory contents
   mem::MMU &memory;
   mem::PMCB proc_pmcb;  // PMCB for this process
-  
+  std::vector<mem::Addr> pagesAllocatedPhysical;
+  FrameAllocator &frame_alloc;
+
+  // PID
+  int pid;
+
   // Page table access
   PageTableManager &ptm;
-  
   /**
    * ParseCommand - parse a trace file command.
    *   Aborts program if invalid trace file.
@@ -118,4 +147,3 @@ private:
 };
 
 #endif /* PROCESS_H */
-
