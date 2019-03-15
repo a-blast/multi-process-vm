@@ -33,11 +33,11 @@ using std::vector;
 
 
 Process::Process(const int time_slice, const string &file_name_, 
-                 mem::MMU &memory_, PageTableManager &ptm_, FrameAllocator &frame_alloc_) 
+                 mem::MMU &memory_, PageTableManager &ptm_, FrameAllocator &frame_alloc_,
+                 int pid) 
 : file_name(file_name_), line_number(0), memory(memory_), ptm(ptm_), 
-  ts(time_slice), num_cmd(0), num_pages(0), frame_alloc(frame_alloc_) {
+  ts(time_slice), num_cmd(0), num_pages(0), frame_alloc(frame_alloc_), pid(pid) {
   
-  this->pid=1;
     // Open the trace file.  Abort program if can't open.
   trace.open(file_name, std::ios_base::in);
   if (!trace.is_open()) {
@@ -138,6 +138,8 @@ bool Process::ParseCommand(
     }
     return true;
   } else if (trace.eof()) {
+      (debug? outStream: cout) << "TERMINATED,";
+      this->killSelf();
       done = true;
       return false;
   } else {
@@ -247,12 +249,11 @@ void Process::CmdFill(const string &line,
   num_cmd += 1;
   // Use buffer for efficiency
   uint8_t buffer[1024];
-  memset(buffer, value, std::min((unsigned long) count, sizeof(buffer)));
+  memset(buffer, value, std::min((unsigned long) count,(unsigned long) sizeof(buffer)));
   
   // Write data to memory
   while (count > 0) {
-    uint32_t block_size = std::min((unsigned long) count, sizeof(buffer));
-  
+    uint32_t block_size = std::min((unsigned long) count,(unsigned long) sizeof(buffer));
     if (!memory.movb(addr, buffer, block_size)) return;
     addr += block_size;
     count -= block_size;

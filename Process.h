@@ -33,8 +33,9 @@ public:
    * @param ptm page table manager
    */
   Process(const int time_slice, const std::string &file_name_, 
-          mem::MMU &memory_, PageTableManager &ptm_, FrameAllocator &frame_alloc_);
-  
+          mem::MMU &memory_, PageTableManager &ptm_,
+          FrameAllocator &frame_alloc_, int pid);
+
   /**
    * Destructor - close trace file, clean up processing
    */
@@ -146,4 +147,3 @@ private:
 };
 
 #endif /* PROCESS_H */
-
