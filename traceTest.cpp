@@ -107,19 +107,20 @@ TEST(ProcessOutput, trace5){
 }
 
 std::vector<Process*> GetAllProcesses(const int timeSlice, mem::MMU &memory,
-                                      PageTableManager &ptm, FrameAllocator &alloc){
+                                      PageTableManager &ptm, FrameAllocator &alloc,
+                                      bool doubleProc=false){
   std::vector<Process*> processes;
   Process *processPointer;
   int pid = 0;
   std::vector<std::string> fileNames = {"./trace1-3.txt","./trace2-3_multi-page.txt",
                                         "./trace3-3_edge-addr.txt", "./trace4-3_wprotect.txt",
                                         "./trace5-3_pagefaults.txt"};
-  while(pid<5){
-                processPointer = new Process(timeSlice, fileNames[pid],
-                                             memory, ptm, alloc, pid+1);
-                processPointer->setDebug();
-                processes.push_back(processPointer);
-                pid++;
+  while(pid<(doubleProc?10:5)){
+    processPointer = new Process(timeSlice, fileNames[(doubleProc?pid%5:pid)],
+                                 memory, ptm, alloc, pid+1);
+    processPointer->setDebug();
+    processes.push_back(processPointer);
+    pid++;
   }
   processPointer = nullptr;
   return processes;
@@ -132,17 +133,17 @@ TEST(ProcessOutput, traceAll_ts2){
   std::vector<Process*> processes = GetAllProcesses(2, memory, ptm, allocator);
   RR_scheduler out(processes,true);
   validateOutput(out.getString(),
-                 getExpectedOutput("./trace_all_ts2.out"),false);
+                 getExpectedOutput("./trace_all_ts2.out"), false);
 }
 
 TEST(ProcessOutput, traceAll_ts3_2){
   mem::MMU memory(128);  // fixed memory size of 128 pages
   FrameAllocator allocator(memory);
   PageTableManager ptm(memory, allocator);
-  std::vector<Process*> processes = GetAllProcesses(3, memory, ptm, allocator);
+  std::vector<Process*> processes = GetAllProcesses(3, memory, ptm, allocator, true);
   RR_scheduler ss(processes,true);
   validateOutput(ss.getString(),
-                 getExpectedOutput("./trace_all_ts3_2.out"),true);
+                 getExpectedOutput("./trace_all_ts3_2.out"), false);
 }
 
 TEST(ProcessOutput, traceAll_ts4){
@@ -152,17 +153,17 @@ TEST(ProcessOutput, traceAll_ts4){
   std::vector<Process*> processes = GetAllProcesses(4, memory, ptm, allocator);
   RR_scheduler ss(processes,true);
   validateOutput(ss.getString(),
-                 getExpectedOutput("./trace_all_ts4.out"),false);
+                 getExpectedOutput("./trace_all_ts4.out"), false);
 }
 
 TEST(ProcessOutput, traceAll_ts5_2){
   mem::MMU memory(128);  // fixed memory size of 128 pages
   FrameAllocator allocator(memory);
   PageTableManager ptm(memory, allocator);
-  std::vector<Process*> processes = GetAllProcesses(5, memory, ptm, allocator);
+  std::vector<Process*> processes = GetAllProcesses(5, memory, ptm, allocator, true);
   RR_scheduler ss(processes,true);
   validateOutput(ss.getString(),
-                 getExpectedOutput("./trace_all_ts5_2.out"),true);
+                 getExpectedOutput("./trace_all_ts5_2.out"), false);
 }
 
 int main(int argc, char* argv[]){
