@@ -161,6 +161,7 @@ void Process::killSelf(){
                            << this->frame_alloc.get_page_frames_free()
                            << "\n";
   this->done = true;
+  this->num_cmd = this->ts;
 }
 
 void Process::CmdAlloc(const string &line, 

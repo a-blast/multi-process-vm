@@ -152,7 +152,7 @@ TEST(ProcessOutput, traceAll_ts4){
   std::vector<Process*> processes = GetAllProcesses(4, memory, ptm, allocator);
   RR_scheduler ss(processes,true);
   validateOutput(ss.getString(),
-                 getExpectedOutput("./trace_all_ts4.out"),true);
+                 getExpectedOutput("./trace_all_ts4.out"),false);
 }
 
 TEST(ProcessOutput, traceAll_ts5_2){
