@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
   
   // Create allocator and page table manager (these will be shared among all 
   // processes in programming assignment 2)
-  mem::MMU memory(128);  // fixed memory size of 128 pages
+  mem::MMU memory(128, 64);  // fixed memory size of 128 pages and TLB to 64 entries
   FrameAllocator allocator(memory);
   PageTableManager ptm(memory, allocator);
   
@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
       i++;
   }
   Ppoint = nullptr;
-  
-  RR_scheduler(p, procs);
-  
+
+  RR_scheduler sched(p);
+
 }
