@@ -52,8 +52,8 @@ RR_scheduler::RR_scheduler(vector<Process*> &p, bool debug) {
         }
         else{
           (debug? this->outStream: cout) << p[k]->getStream();
-            // cout << k << "\n";
             k = (k+1)%p.size();
+            // cout <<"k: " << k << "\n";
         }
         // cout << std::dec << l << " this is l\n";
         l++;

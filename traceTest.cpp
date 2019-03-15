@@ -129,42 +129,41 @@ TEST(ProcessOutput, traceAll_ts2){
   mem::MMU memory(128);  // fixed memory size of 128 pages
   FrameAllocator allocator(memory);
   PageTableManager ptm(memory, allocator);
-  std::istringstream ss;
   std::vector<Process*> processes = GetAllProcesses(2, memory, ptm, allocator);
   RR_scheduler out(processes,true);
   validateOutput(out.getString(),
-                 getExpectedOutput("./trace_all_ts2.out"),true);
+                 getExpectedOutput("./trace_all_ts2.out"),false);
 }
 
-// TEST(ProcessOutput, traceAll_ts3_2){
-//   mem::MMU memory(128);  // fixed memory size of 128 pages
-//   FrameAllocator allocator(memory);
-//   PageTableManager ptm(memory, allocator);
-//   std::istringstream ss;
-//   ss = processOutputGetter("./trace3-3_edge-addr.txt", memory, ptm);
-//   validateOutput(ss.str(),
-//                  getExpectedOutput("./trace3-3_edge-addr.txt.out"),true);
-// }
+TEST(ProcessOutput, traceAll_ts3_2){
+  mem::MMU memory(128);  // fixed memory size of 128 pages
+  FrameAllocator allocator(memory);
+  PageTableManager ptm(memory, allocator);
+  std::vector<Process*> processes = GetAllProcesses(3, memory, ptm, allocator);
+  RR_scheduler ss(processes,true);
+  validateOutput(ss.getString(),
+                 getExpectedOutput("./trace_all_ts3_2.out"),true);
+}
 
-// TEST(ProcessOutput, traceAll_ts4){
-//   mem::MMU memory(128);  // fixed memory size of 128 pages
-//   FrameAllocator allocator(memory);
-//   PageTableManager ptm(memory, allocator);
-//   std::istringstream ss;
-//   ss = processOutputGetter("./trace3-3_edge-addr.txt", memory, ptm);
-//   validateOutput(ss.str(),
-//                  getExpectedOutput("./trace3-3_edge-addr.txt.out"),true);
-// }
+TEST(ProcessOutput, traceAll_ts4){
+  mem::MMU memory(128);  // fixed memory size of 128 pages
+  FrameAllocator allocator(memory);
+  PageTableManager ptm(memory, allocator);
+  std::vector<Process*> processes = GetAllProcesses(4, memory, ptm, allocator);
+  RR_scheduler ss(processes,true);
+  validateOutput(ss.getString(),
+                 getExpectedOutput("./trace_all_ts4.out"),true);
+}
 
-// TEST(ProcessOutput, traceAll_ts5_2){
-//   mem::MMU memory(128);  // fixed memory size of 128 pages
-//   FrameAllocator allocator(memory);
-//   PageTableManager ptm(memory, allocator);
-//   std::istringstream ss;
-//   ss = processOutputGetter("./trace3-3_edge-addr.txt", memory, ptm);
-//   validateOutput(ss.str(),
-//                  getExpectedOutput("./trace3-3_edge-addr.txt.out"),true);
-// }
+TEST(ProcessOutput, traceAll_ts5_2){
+  mem::MMU memory(128);  // fixed memory size of 128 pages
+  FrameAllocator allocator(memory);
+  PageTableManager ptm(memory, allocator);
+  std::vector<Process*> processes = GetAllProcesses(5, memory, ptm, allocator);
+  RR_scheduler ss(processes,true);
+  validateOutput(ss.getString(),
+                 getExpectedOutput("./trace_all_ts5_2.out"),true);
+}
 
 int main(int argc, char* argv[]){
   ::testing::InitGoogleTest(&argc,argv);

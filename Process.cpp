@@ -141,7 +141,6 @@ bool Process::ParseCommand(
     (debug? outStream: cout) << std::dec << line_number << ":"
                              << this->pid << ":" << "TERMINATED, ";
       this->killSelf();
-      done = true;
       return false;
   } else {
     cerr << "ERROR: getline failed on trace file: " << file_name 
@@ -161,6 +160,7 @@ void Process::killSelf(){
                            << std::hex
                            << this->frame_alloc.get_page_frames_free()
                            << "\n";
+  this->done = true;
 }
 
 void Process::CmdAlloc(const string &line, 
