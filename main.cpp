@@ -31,12 +31,8 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
   // Use command line argument as file name
-  if (argc != 4) {
-    std::cerr << "usage: program3 input_file\n";
-    exit(1);
-  }
   
-  // Create allocator and page table manager (these will be shared among all 
+  // Create allocator and page table manager (these will be shared among all
   // processes in programming assignment 2)
   mem::MMU memory(128, 64);  // fixed memory size of 128 pages and TLB to 64 entries
   FrameAllocator allocator(memory);
