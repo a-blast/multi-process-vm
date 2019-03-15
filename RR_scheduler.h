@@ -61,4 +61,3 @@ private:
 };
 
 #endif /* RR_SCHEDULER_H */
-

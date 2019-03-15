@@ -55,7 +55,9 @@ Process::~Process() {
 
 void Process::Exec(void) {
   // Set the user page table
+  //Switch to user mode
   memory.set_user_PMCB(proc_pmcb);
+  memory.FlushTLB();
   
   // Set up fault handlers
   memory.SetPageFaultHandler(std::make_shared<PageFaultHandler>(*this));
@@ -151,7 +153,9 @@ bool Process::ParseCommand(
 
 void Process::killSelf(){
 
+  //Switch to kernel mode
   this->memory.set_kernel_PMCB();
+  this->memory.FlushTLB();
 
   this->frame_alloc
     .FreePageFrames(this->num_pages+1, this->pagesAllocatedPhysical);
@@ -169,9 +173,13 @@ void Process::CmdAlloc(const string &line,
                        const vector<uint32_t> &cmdArgs) {
   // Allocate the specified memory pages
   num_cmd += 1;
+  //Switch to kernel mode
   memory.set_kernel_PMCB();
+  memory.FlushTLB();
   ptm.MapProcessPages(proc_pmcb, cmdArgs.at(0), cmdArgs.at(1), this->pagesAllocatedPhysical);
+  //Switch to user mode
   memory.set_user_PMCB(proc_pmcb);
+  memory.FlushTLB();
 }
 
 void Process::CmdCmp(const string &line,
@@ -287,9 +295,13 @@ void Process::CmdPerm(const string &line,
                       const vector<uint32_t> &cmdArgs) {
   // Change the permissions of the specified pages
   num_cmd += 1;
+  //Switch to kernel mode
   memory.set_kernel_PMCB();
+  memory.FlushTLB();
   ptm.SetPageWritePermission(proc_pmcb, cmdArgs.at(0), cmdArgs.at(1), cmdArgs.at(2));
+  //Switch to user mode
   memory.set_user_PMCB(proc_pmcb);
+  memory.FlushTLB();
 }
 
 void Process::CmdQuota(const string &line, 
