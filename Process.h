@@ -33,9 +33,9 @@ public:
    * @param ptm page table manager
    */
   Process(const int time_slice, const std::string &file_name_, 
-          mem::MMU &memory_, PageTableManager &ptm_, FrameAllocator &frame_alloc_,
-          int pid);
-  
+          mem::MMU &memory_, PageTableManager &ptm_,
+          FrameAllocator &frame_alloc_, int pid);
+
   /**
    * Destructor - close trace file, clean up processing
    */
@@ -57,7 +57,11 @@ public:
     setDebug - divert output from cout to a buffer stream for testing validation 
    */
   void setDebug(void){this->debug = true;}
-  std::string getStream(void){return outStream.str();}
+  std::string getStream(void){
+    std::string out = outStream.str();
+    std::stringstream().swap(outStream);
+    return out;
+  }
   
   // for testing output
   bool debug=false;

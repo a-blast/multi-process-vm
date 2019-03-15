@@ -38,7 +38,7 @@ public:
     /**
     * Constructor
     */
-    RR_scheduler(vector<Process*> processes, vector<int> pid);
+    RR_scheduler(vector<Process*> &processes, bool debug=false);
 //    
     
     /**
@@ -51,10 +51,13 @@ public:
     RR_scheduler(RR_scheduler &&other) = delete;
     RR_scheduler operator=(const RR_scheduler &other) = delete;
     RR_scheduler operator=(RR_scheduler &&other) = delete;
-    
+
+    std::string getString(void){return outStream.str();};
+
 private:
+
+    std::stringstream outStream;
 
 };
 
 #endif /* RR_SCHEDULER_H */
-
