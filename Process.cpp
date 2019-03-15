@@ -138,7 +138,8 @@ bool Process::ParseCommand(
     }
     return true;
   } else if (trace.eof()) {
-      (debug? outStream: cout) << "TERMINATED,";
+    (debug? outStream: cout) << std::dec << line_number << ":"
+                             << this->pid << ":" << "TERMINATED, ";
       this->killSelf();
       done = true;
       return false;
