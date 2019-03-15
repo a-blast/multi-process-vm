@@ -48,11 +48,15 @@ class PageFaultHandler : public mem::MMU::FaultHandler {
         return false;
       }
       
+      //Switch to kernel mode
       proc.memory.set_kernel_PMCB();
+      proc.memory.FlushTLB();
       mem::Addr basePageVirtAddr = (pmcb.next_vaddress >> 14) << 14;
       proc.ptm.MapProcessPages(pmcb, basePageVirtAddr ,
                                1, proc.pagesAllocatedPhysical);
+      //Switch to user mode
       proc.memory.set_user_PMCB(pmcb);
+      proc.memory.FlushTLB();
       proc.num_pages ++;
       return true;
     }else{
