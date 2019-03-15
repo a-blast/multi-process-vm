@@ -5,10 +5,12 @@
 #include "Process.h"
 #include "PageFaultHandler.h"
 #include "WritePermissionFaultHandler.h"
+#include "RR_scheduler.h"
 
 #include <MMU.h>
 
 #include <algorithm>
+#include <vector>
 #include <cctype>
 #include <cstring>
 #include <iomanip>
@@ -18,7 +20,7 @@
 auto processOutputGetter =
   [](std::string filePath, mem::MMU &memory,
      PageTableManager &ptm, FrameAllocator &alloc){
-    Process proc(5000, filePath, memory, ptm, alloc);
+    Process proc(5000, filePath, memory, ptm, alloc, 1);
     proc.setDebug();
     proc.Exec();
     std::istringstream outStream(proc.getStream());
@@ -61,7 +63,7 @@ TEST(ProcessOutput, trace1){
   PageTableManager ptm(memory, allocator);
   std::istringstream ss;
   ss = processOutputGetter("./trace1-3.txt", memory, ptm, allocator);
-  validateOutput(ss.str(), getExpectedOutput("./trace1-3.txt.out"),true);
+  validateOutput(ss.str(), getExpectedOutput("./trace1-3.txt.out"),false);
 }
 
 TEST(ProcessOutput, trace2){
@@ -101,19 +103,38 @@ TEST(ProcessOutput, trace5){
   std::istringstream ss;
   ss = processOutputGetter("./trace5-3_pagefaults.txt", memory, ptm, allocator);
   validateOutput(ss.str(),
-                 getExpectedOutput("./trace5-3_pagefaults.txt.out"),true);
+                 getExpectedOutput("./trace5-3_pagefaults.txt.out"),false);
 }
 
+std::vector<Process*> GetAllProcesses(const int timeSlice, mem::MMU &memory,
+                                      PageTableManager &ptm, FrameAllocator &alloc){
+  std::vector<Process*> processes;
+  Process *processPointer;
+  int pid = 0;
+  std::vector<std::string> fileNames = {"./trace1-3.txt","./trace2-3_multi-page.txt",
+                                        "./trace3-3_edge-addr.txt", "./trace4-3_wprotect.txt",
+                                        "./trace5-3_pagefaults.txt"};
+  while(pid<5){
+                processPointer = new Process(timeSlice, fileNames[pid],
+                                             memory, ptm, alloc, pid+1);
+                processPointer->setDebug();
+                processes.push_back(processPointer);
+                pid++;
+  }
+  processPointer = nullptr;
+  return processes;
+}
 
-// TEST(ProcessOutput, traceAll_ts2){
-//   mem::MMU memory(128);  // fixed memory size of 128 pages
-//   FrameAllocator allocator(memory);
-//   PageTableManager ptm(memory, allocator);
-//   std::istringstream ss;
-//   ss = processOutputGetter("./trace3-3_edge-addr.txt", memory, ptm);
-//   validateOutput(ss.str(),
-//                  getExpectedOutput("./trace3-3_edge-addr.txt.out"),true);
-// }
+TEST(ProcessOutput, traceAll_ts2){
+  mem::MMU memory(128);  // fixed memory size of 128 pages
+  FrameAllocator allocator(memory);
+  PageTableManager ptm(memory, allocator);
+  std::istringstream ss;
+  std::vector<Process*> processes = GetAllProcesses(2, memory, ptm, allocator);
+  RR_scheduler out(processes,true);
+  validateOutput(out.getString(),
+                 getExpectedOutput("./trace_all_ts2.out"),true);
+}
 
 // TEST(ProcessOutput, traceAll_ts3_2){
 //   mem::MMU memory(128);  // fixed memory size of 128 pages

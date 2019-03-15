@@ -57,7 +57,11 @@ public:
     setDebug - divert output from cout to a buffer stream for testing validation 
    */
   void setDebug(void){this->debug = true;}
-  std::string getStream(void){return outStream.str();}
+  std::string getStream(void){
+    std::string out = outStream.str();
+    std::stringstream().swap(outStream);
+    return out;
+  }
   
   // for testing output
   bool debug=false;

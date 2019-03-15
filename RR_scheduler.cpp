@@ -29,32 +29,33 @@
 using std::cout;
 using std::vector;
 
-RR_scheduler::RR_scheduler(vector<Process*> p, vector<int> pid) {
+RR_scheduler::RR_scheduler(vector<Process*> &p, bool debug) {
     
     int k = 0;
     int l = 0;
-    Process *Ppoint; 
-    
+    Process *Ppoint;
     while (p.size() > 0){
         p[k]->Exec();
         // delete out of the vector
         // delete off of heap
         if (p[k]->getDone()){
-            cout << "Process " << k << " is done!\n";
+          (debug? this->outStream: cout) << p[k]->getStream();
+            // cout << "Process " << k << " is done!\n";
             Ppoint = p[k];
             p.erase(p.begin() + k);
             delete Ppoint;
             Ppoint = nullptr;
-            cout << "p.size() = " << p.size() << "\n";
+            // cout << "p.size() = " << p.size() << "\n";
             if (p.size() > 0){
                 k = k%p.size();
             }
         }
         else{
-            cout << k << "\n";
+          (debug? this->outStream: cout) << p[k]->getStream();
+            // cout << k << "\n";
             k = (k+1)%p.size();
         }
-        cout << std::dec << l << " this is l\n";
+        // cout << std::dec << l << " this is l\n";
         l++;
     }
 }

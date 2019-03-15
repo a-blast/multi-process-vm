@@ -58,6 +58,6 @@ int main(int argc, char* argv[]) {
   }
   Ppoint = nullptr;
 
-  RR_scheduler(p, procs);
+  RR_scheduler sched(p);
 
 }
